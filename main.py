@@ -175,8 +175,6 @@ class UberEats:
 
         status = store_result['status']
         if status != 'success':
-            error_message = store_result['data']['message']
-            print('Error:', error_message)
             return
 
         store_data = store_result['data']
