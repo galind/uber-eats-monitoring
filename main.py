@@ -1,4 +1,5 @@
 import sys
+import time
 import config
 import requests
 import urllib.parse
@@ -178,6 +179,7 @@ class UberEats:
 
                 status = store_result['status']
                 if status != 'success':
+                    print(store_result)
                     continue
 
                 store_data = store_result['data']
@@ -207,6 +209,8 @@ class UberEats:
                     self.send_discord_notification(
                         new_store_info, saved_status
                     )
+
+            time.sleep(15)
 
 
 if __name__ == '__main__':
