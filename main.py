@@ -168,47 +168,54 @@ class UberEats:
         url = config.WEBHOOK
         self.session.post(url, json=payload)
 
+    def check_store_updates(self, saved_store_info: dict) -> None:
+        store_id = saved_store_info[0]
+        saved_status = saved_store_info[3]
+        store_result = self.get_store_info(store_id)
+
+        status = store_result['status']
+        if status != 'success':
+            error_message = store_result['data']['message']
+            print('Error:', error_message)
+            return
+
+        store_data = store_result['data']
+        store_title = store_data['title']
+        store_image = store_data['heroImageUrls'][1]['url']
+
+        store_metadata = store_data['storeInfoMetadata']
+        store_status = (
+            store_metadata['storeAvailablityStatus']['state']
+        )
+
+        new_store_info = (
+            store_id, store_title, store_image, store_status
+        )
+
+        if saved_store_info != new_store_info:
+            stmt = update(store_table).where(
+                store_table.c.id == store_id
+            ).values(
+                title=store_title,
+                image=store_image,
+                status=store_status
+            )
+            connection.execute(stmt)
+
+        if saved_status != store_status:
+            self.send_discord_notification(
+                new_store_info, saved_status
+            )
+
     def run_task(self) -> None:
         while True:
             store_list = self.get_store_list()
 
-            for saved_store_info in store_list:
-                store_id = saved_store_info[0]
-                saved_status = saved_store_info[3]
-                store_result = self.get_store_info(store_id)
-
-                status = store_result['status']
-                if status != 'success':
-                    print(store_result)
+            for store_info in store_list:
+                try:
+                    self.check_store_updates(store_info)
+                except Exception:
                     continue
-
-                store_data = store_result['data']
-                store_title = store_data['title']
-                store_image = store_data['heroImageUrls'][1]['url']
-
-                store_metadata = store_data['storeInfoMetadata']
-                store_status = (
-                    store_metadata['storeAvailablityStatus']['state']
-                )
-
-                new_store_info = (
-                    store_id, store_title, store_image, store_status
-                )
-
-                if saved_store_info != new_store_info:
-                    stmt = update(store_table).where(
-                        store_table.c.id == store_id
-                    ).values(
-                        title=store_title,
-                        image=store_image,
-                        status=store_status
-                    )
-                    connection.execute(stmt)
-
-                if saved_status != store_status:
-                    self.send_discord_notification(
-                        new_store_info, saved_status
-                    )
 
             time.sleep(15)
 
