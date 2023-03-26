@@ -189,18 +189,24 @@ class UberEats:
                     store_metadata['storeAvailablityStatus']['state']
                 )
 
-                new_store_info = (store_id, store_title, store_image, store_status)
+                new_store_info = (
+                    store_id, store_title, store_image, store_status
+                )
 
                 if saved_store_info != new_store_info:
                     stmt = update(store_table).where(
                         store_table.c.id == store_id
                     ).values(
-                        title=store_title, image=store_image, status=store_status
+                        title=store_title,
+                        image=store_image,
+                        status=store_status
                     )
                     connection.execute(stmt)
 
                 if saved_status != store_status:
-                    self.send_discord_notification(new_store_info, saved_status)
+                    self.send_discord_notification(
+                        new_store_info, saved_status
+                    )
 
 
 if __name__ == '__main__':
