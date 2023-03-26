@@ -16,7 +16,7 @@ from sqlalchemy import (
 from sqlalchemy_utils import database_exists, create_database
 
 
-engine = create_engine(config.DATABASE_URL, echo=True)
+engine = create_engine(config.DATABASE_URL, echo=False)
 if not database_exists(engine.url):
     create_database(engine.url)
 connection = engine.connect()
@@ -168,38 +168,39 @@ class UberEats:
         self.session.post(url, json=payload)
 
     def run_task(self) -> None:
-        store_list = self.get_store_list()
+        while True:
+            store_list = self.get_store_list()
 
-        for saved_store_info in store_list:
-            store_id = saved_store_info[0]
-            saved_status = saved_store_info[3]
-            store_result = self.get_store_info(store_id)
+            for saved_store_info in store_list:
+                store_id = saved_store_info[0]
+                saved_status = saved_store_info[3]
+                store_result = self.get_store_info(store_id)
 
-            status = store_result['status']
-            if status != 'success':
-                continue
+                status = store_result['status']
+                if status != 'success':
+                    continue
 
-            store_data = store_result['data']
-            store_title = store_data['title']
-            store_image = store_data['heroImageUrls'][1]['url']
+                store_data = store_result['data']
+                store_title = store_data['title']
+                store_image = store_data['heroImageUrls'][1]['url']
 
-            store_metadata = store_data['storeInfoMetadata']
-            store_status = (
-                store_metadata['storeAvailablityStatus']['state']
-            )
-
-            new_store_info = (store_id, store_title, store_image, store_status)
-
-            if saved_store_info != new_store_info:
-                stmt = update(store_table).where(
-                    store_table.c.id == store_id
-                ).values(
-                    title=store_title, image=store_image, status=store_status
+                store_metadata = store_data['storeInfoMetadata']
+                store_status = (
+                    store_metadata['storeAvailablityStatus']['state']
                 )
-                connection.execute(stmt)
 
-            if saved_status != store_status:
-                self.send_discord_notification(new_store_info, saved_status)
+                new_store_info = (store_id, store_title, store_image, store_status)
+
+                if saved_store_info != new_store_info:
+                    stmt = update(store_table).where(
+                        store_table.c.id == store_id
+                    ).values(
+                        title=store_title, image=store_image, status=store_status
+                    )
+                    connection.execute(stmt)
+
+                if saved_status != store_status:
+                    self.send_discord_notification(new_store_info, saved_status)
 
 
 if __name__ == '__main__':
